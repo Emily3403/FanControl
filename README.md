@@ -25,7 +25,7 @@ The Fan should run at 100% all the time. As a _lot_ of heat will be generated, i
 
 ## On-demand / Balanced
 
-In this scenario you are working on stuff with high, bursty demands. This could be an IDE that has to re-index quite often.
+In this scenario you are working on stuff with high, bursty, demands. This could be an IDE that has to re-index quite often.
 
 ### CPU Frequency
 
