@@ -1,9 +1,10 @@
 mod strategies;
+mod lib;
 
 use strategies::{Strategy};
 
 use clap::{arg, Args, Command, Parser, Subcommand, ValueEnum};
-
+use crate::lib::{connect_to_socket, do_all_client_actions};
 
 
 fn cli() -> Command {
@@ -35,5 +36,24 @@ fn cli() -> Command {
 
 fn main() {
     let args = cli().get_matches();
-    println!("Hello, world!");
+
+    // First start the daemon if nothing is running. Thus, the following client code will always succeed.
+    let listener = connect_to_socket();
+
+    // If we are spawned in ClientMode, this function will talk with the daemon and then exit the program.
+    do_all_client_actions(args);
+
+    loop {
+        // 1. Check if settings have to be changed due to IPC
+
+        // 2. Check if settings have to be changed upon detection of certain programs / load
+
+        // 3. Check the current temperatures
+
+        // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
+
+
+    }
+
+
 }
