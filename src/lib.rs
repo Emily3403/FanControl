@@ -11,7 +11,7 @@ pub fn connect_to_socket() -> Result<UnixListener, std::io::Error> {
 
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
-    let client = UnixStream::connect(SOCKET_ADDR)
+    let client = UnixStream::connect(SOCKET_ADDR);
 
     if match args.subcommand() {
         Some(("swap", sub_matches)) => {
