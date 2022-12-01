@@ -1,6 +1,8 @@
 # FanControl
 
-This Program provides a way to control your fans while also controling the "Govenor policy" as well as "Energy Preference" of your linux system. Three modes of operating are currently supported:
+This Program provides a way to control your fans while also controling the "Govenor policy" as well as "Energy Preference" of your linux system. Three modes of operating are currently supported.
+
+This Program should transparently switch modes to the most appropriate in this moment. You will be able to disable this feature if you don't like it as it is tailored to my personal workflow
 
 ## Sustained Load
 
