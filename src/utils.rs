@@ -4,7 +4,7 @@ use crate::connect_as_client;
 
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
-    let client = connect_as_client();
+    let client = connect_as_client().unwrap();
 
     if match args.subcommand() {
         Some(("swap", sub_matches)) => {

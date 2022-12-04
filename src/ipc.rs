@@ -103,5 +103,4 @@ pub fn connect_as_server() -> Result<UnixListener, std::io::Error> {
 
 pub fn connect_as_client() -> Result<UnixStream, std::io::Error> {
     UnixStream::connect(SOCKET_ADDR)
-    // TODO: Is the current program active?
 }
