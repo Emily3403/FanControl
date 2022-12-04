@@ -1,20 +1,28 @@
 #![feature(let_else)]
 
 mod strategies;
-mod lib;
+mod utils;
 mod ipc;
 
-use std::io::Read;
-use std::thread::{sleep, yield_now};
+use std::borrow::Borrow;
+use std::io::{Read, Write};
+use std::thread::{sleep};
 use std::time::Duration;
-use strategies::{Strategy};
-
-use clap::{arg, Args, Command, Parser, Subcommand, ValueEnum};
-use crate::lib::{do_all_client_actions};
-use crate::ipc::{connect_as_server, connect_as_client};
 
 
-fn cli() -> Command {
+use clap::{arg, Command};
+use lazy_static::lazy_static;
+use log::{debug, info};
+use crate::utils::{do_all_client_actions};
+use crate::ipc::{connect_as_server, connect_as_client, ClientMessage, ServerMessage};
+
+lazy_static! {
+    static ref EXPECTED_MESSAGE_SIZE: usize =
+        bincode::serialized_size(&ClientMessage::IsAlive).unwrap().try_into().unwrap();
+}
+
+
+pub fn cli() -> Command {
     Command::new("fanctrl")
         .about("A FanControl Plugin for the Framework Laptop")
 
@@ -42,10 +50,15 @@ fn cli() -> Command {
 }
 
 fn main() {
+    pretty_env_logger::init();
     let args = cli().get_matches();
 
     // First start the daemon if nothing is running. Thus, the following client code will always succeed.
     let listener = connect_as_server();
+    match listener {
+        Ok(_) => info!("I could acquire the socket, I am the Server!"),
+        Err(_) => info!("I could _not_ acquire the socket, I am the Client!"),
+    };
 
     let listener = match listener {
         Ok(it) => it,
@@ -55,7 +68,7 @@ fn main() {
             println!("The socket already exists, going into client mode!");
             do_all_client_actions(args);
             return;
-        },
+        }
     };
 
     loop {
@@ -67,18 +80,30 @@ fn main() {
 
         // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
 
-        sleep(Duration::from_secs(1));
+
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else {
                 break;
             };
+            sleep(Duration::from_secs(1));
 
-            let mut s = String::new();
-            stream.read_to_string(&mut s);
-            println!("{s}");
+            debug!("Got a new connection!");
+
+            let mut buf = vec![0; *EXPECTED_MESSAGE_SIZE];
+            let Ok(_) = stream.read_exact(&mut buf) else {
+                break;
+            };
+
+            println!("{:?}", buf);
+            let s: ClientMessage = bincode::deserialize(&buf).unwrap();
+
+            debug!("Message has contents: {:?}", s);
+
+            if s == ClientMessage::IsAlive {
+                let msg = bincode::serialize(&ServerMessage::Ok).unwrap();
+                stream.write_all(&msg).unwrap();
+                debug!("Sent back the message!");
+            }
         }
-
     }
-
-
 }

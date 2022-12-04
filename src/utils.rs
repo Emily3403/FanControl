@@ -1,12 +1,11 @@
-use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::exit;
 use clap::ArgMatches;
-
-
+use crate::connect_as_client;
 
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
-    let client =
+    let client = connect_as_client();
+
     if match args.subcommand() {
         Some(("swap", sub_matches)) => {
             let strategy = sub_matches.get_one::<String>("STRATEGY").expect("required");
