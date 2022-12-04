@@ -2,17 +2,11 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::exit;
 use clap::ArgMatches;
 
-const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
 
-pub fn connect_to_socket() -> Result<UnixListener, std::io::Error> {
-    let listener = UnixListener::bind(SOCKET_ADDR)?;
-    Ok(listener)
-}
 
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
-    let client = UnixStream::connect(SOCKET_ADDR);
-
+    let client =
     if match args.subcommand() {
         Some(("swap", sub_matches)) => {
             let strategy = sub_matches.get_one::<String>("STRATEGY").expect("required");
@@ -41,5 +35,7 @@ pub fn do_all_client_actions(args: ArgMatches) -> () {
         _ => unreachable!(),
     } {
         exit(0);
-    }
+    };
+
+    // TODO: Acknowledge the response and if none is there kill the socket.
 }

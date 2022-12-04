@@ -1,10 +1,17 @@
+#![feature(let_else)]
+
 mod strategies;
 mod lib;
+mod ipc;
 
+use std::io::Read;
+use std::thread::{sleep, yield_now};
+use std::time::Duration;
 use strategies::{Strategy};
 
 use clap::{arg, Args, Command, Parser, Subcommand, ValueEnum};
-use crate::lib::{connect_to_socket, do_all_client_actions};
+use crate::lib::{do_all_client_actions};
+use crate::ipc::{connect_as_server, connect_as_client};
 
 
 fn cli() -> Command {
@@ -38,10 +45,18 @@ fn main() {
     let args = cli().get_matches();
 
     // First start the daemon if nothing is running. Thus, the following client code will always succeed.
-    let listener = connect_to_socket();
+    let listener = connect_as_server();
 
-    // If we are spawned in ClientMode, this function will talk with the daemon and then exit the program.
-    do_all_client_actions(args);
+    let listener = match listener {
+        Ok(it) => it,
+
+        // If there is already another socket connection go into client mode and communicate with it.
+        Err(_) => {
+            println!("The socket already exists, going into client mode!");
+            do_all_client_actions(args);
+            return;
+        },
+    };
 
     loop {
         // 1. Check if settings have to be changed due to IPC
@@ -52,6 +67,16 @@ fn main() {
 
         // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
 
+        sleep(Duration::from_secs(1));
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else {
+                break;
+            };
+
+            let mut s = String::new();
+            stream.read_to_string(&mut s);
+            println!("{s}");
+        }
 
     }
 
