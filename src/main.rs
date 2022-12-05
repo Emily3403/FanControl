@@ -23,7 +23,7 @@ lazy_static! {
 
 
 pub fn cli() -> Command {
-    Command::new("fanctrl")
+    Command::new("fanctl")
         .about("A FanControl Plugin for the Framework Laptop")
 
         .subcommand(
@@ -32,6 +32,7 @@ pub fn cli() -> Command {
                 .arg(arg!(<STRATEGY> "The new strategy to apply"))
 
                 .arg_required_else_help(true)
+            // TODO: Validator
         )
 
         .subcommand(
@@ -47,29 +48,31 @@ pub fn cli() -> Command {
                 )
                 .arg_required_else_help(true)
         )
+
+        .subcommand(
+            Command::new("reset")
+                .about("Resets the fan percentage if one was set")
+        )
 }
 
 fn main() {
     pretty_env_logger::init();
     let args = cli().get_matches();
 
-    // First start the daemon if nothing is running. Thus, the following client code will always succeed.
+    // First start the daemon if nothing is running.
     let listener = connect_as_server();
     match listener {
         Ok(_) => info!("I could acquire the socket, I am the Server!"),
         Err(_) => info!("I could _not_ acquire the socket, I am the Client!"),
     };
 
-    let listener = match listener {
-        Ok(it) => it,
-
+    let Ok(listener) = listener else {
         // If there is already another socket connection go into client mode and communicate with it.
-        Err(_) => {
-            println!("The socket already exists, going into client mode!");
-            do_all_client_actions(args);
-            return;
-        }
+        println!("The socket already exists, going into client mode!");
+        do_all_client_actions(args);
+        return;
     };
+
 
     loop {
         // 1. Check if settings have to be changed due to IPC
