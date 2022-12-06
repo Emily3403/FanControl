@@ -9,6 +9,7 @@ use nix::sys::signal;
 use nix::sys::signal::Signal;
 use nix::unistd::Pid;
 use serde::{Serialize, Deserialize};
+use crate::strategies::Strategy;
 
 
 const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
@@ -17,14 +18,24 @@ const READ_TIMEOUT: Duration = Duration::from_secs(5);
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ClientMessage {
     IsAlive,
-    Test,
+    Status,
+    Swap(Strategy),
+    SetFanPercent(i32),
+    Reset,
 }
 
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ServerMessage {
     Ok,
+    Status(Status),
     Err,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct Status {
+    temp: i32,
+    fan_percent: i32,
 }
 
 
