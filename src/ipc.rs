@@ -1,15 +1,15 @@
 use std::{fs, io};
-use std::error::Error;
-use std::io::{Read, Write};
+
+
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::{Command, Stdio};
 use std::time::Duration;
-use log::{debug, info, warn};
+use log::{debug, info};
 use nix::sys::signal;
 use nix::sys::signal::Signal;
 use nix::unistd::Pid;
 use serde::{Serialize, Deserialize};
-use crate::EXPECTED_MESSAGE_SIZE;
+
 
 const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
@@ -28,13 +28,38 @@ pub enum ServerMessage {
 }
 
 
+pub fn get_message_from_client(stream: &UnixStream) -> Result<ClientMessage, bincode::Error> {
+    let stream = stream.try_clone()?;
+    bincode::deserialize_from(stream)
+}
+
+pub fn send_message_to_client(stream: &UnixStream, message: ServerMessage) -> Result<(), bincode::Error> {
+    let stream = stream.try_clone()?;
+    bincode::serialize_into(stream, &message)?;
+
+    Ok(())
+}
+
+pub fn get_message_from_server(stream: &UnixStream) -> Result<ServerMessage, bincode::Error> {
+    let stream = stream.try_clone()?;
+    bincode::deserialize_from(stream)
+}
+
+pub fn send_message_to_server(stream: &UnixStream, message: ClientMessage) -> Result<(), bincode::Error> {
+    let stream = stream.try_clone()?;
+    bincode::serialize_into(stream, &message)?;
+
+    Ok(())
+}
+
+
 fn get_pid_of_server() -> Option<i32> {
     let mut cmd = Command::new("lsof");
-    cmd.stdout(Stdio::piped());
     cmd.args(["-t", SOCKET_ADDR]);
+    cmd.stdout(Stdio::piped());
 
-    let child = cmd.spawn().ok()?;
-    let output = child.wait_with_output().and_then(
+    let mut child = cmd.spawn().ok()?;
+    child.wait().and_then(
         |_| {
             match cmd.status() {
                 Err(it) => Err(it),
@@ -42,12 +67,11 @@ fn get_pid_of_server() -> Option<i32> {
                 Ok(status) => {
                     if status.success() {
                         Ok(status)
-                    }
-                    else {
+                    } else {
                         // Err(status)
                         todo!();
                     }
-                },
+                }
             }
         }).ok()?;
 
@@ -68,35 +92,28 @@ fn get_pid_of_server() -> Option<i32> {
 }
 
 
-fn check_server_responds_is_alive(connection: &mut UnixStream) -> bool {
-    debug!("Checking if the server responds to IsAlive message withing {:?}", READ_TIMEOUT);
+fn check_server_responds_is_alive(stream: &mut UnixStream) -> bool {
+    debug!("Checking if the server responds to IsAlive message within {:?}", READ_TIMEOUT);
 
-    let encoded = bincode::serialize(&ClientMessage::IsAlive).unwrap();
-    connection.write_all(&encoded).unwrap();
-
-    let mut response = vec![0; *EXPECTED_MESSAGE_SIZE];
-
-    if let Err(_) = connection.read_exact(&mut response) {
-        debug!("Can't connect to server (timeout)!");
+    let Ok(()) = send_message_to_server(stream, ClientMessage::IsAlive) else {
         return false;
-    }
+    };
 
-    let response: ServerMessage = bincode::deserialize(&response).unwrap();
-    debug!("Server is OK");
+    let Ok(response) = get_message_from_server(stream) else {
+        return false;
+    };
+
     response == ServerMessage::Ok
 }
 
 
-fn is_server_active() -> bool {
+fn check_server_alive() -> bool {
     // First check if we can connect. If not, there is no chance that the server is active.
-    let connection = connect_as_client();
-    let Ok(mut connection) = connection else {
+    let Ok(mut stream) = connect_as_client() else {
         debug!("Can't connect to server (connect failed) - aborting!");
         return false;
     };
-
-    // Set Read timeout
-    connection.set_read_timeout(Some(READ_TIMEOUT)).unwrap();
+    stream.set_read_timeout(Some(READ_TIMEOUT)).unwrap();
 
     // Get the PID of the running server (if there is one) for future use.
     let Some(pid) = get_pid_of_server() else {
@@ -104,7 +121,7 @@ fn is_server_active() -> bool {
     };
 
     // Now check if the server responds to a IsAlive message
-    let is_alive = check_server_responds_is_alive(&mut connection);
+    let is_alive = check_server_responds_is_alive(&mut stream);
 
     if !is_alive {
         debug!("Can't connect to server (wrong response)! Killing the process and taking its place");
@@ -123,9 +140,9 @@ pub fn connect_as_server() -> io::Result<UnixListener> {
     }
 
     // Either there is a program running or the socket file was not properly cleaned up.
-    warn!("Found existing socket file! Checking if the server is active");
-    if !is_server_active() {
-        info!("The server is not active, removing old socket file");
+    debug!("binding failed, checking if the server is active");
+    if !check_server_alive() {
+        debug!("The server is not active, removing old socket file");
         fs::remove_file(SOCKET_ADDR).unwrap_or_default();
     }
 

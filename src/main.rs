@@ -3,23 +3,20 @@
 mod strategies;
 mod utils;
 mod ipc;
+mod client;
+mod server;
 
-use std::borrow::Borrow;
-use std::io::{Read, Write};
+
 use std::thread::{sleep};
 use std::time::Duration;
 
 
 use clap::{arg, Command};
-use lazy_static::lazy_static;
 use log::{debug, info};
-use crate::utils::{do_all_client_actions};
-use crate::ipc::{connect_as_server, connect_as_client, ClientMessage, ServerMessage};
+use crate::client::{do_all_client_actions};
+use crate::ipc::{connect_as_server, connect_as_client, ClientMessage, ServerMessage, get_message_from_client};
+use crate::server::server_handle_messages;
 
-lazy_static! {
-    static ref EXPECTED_MESSAGE_SIZE: usize =
-        bincode::serialized_size(&ClientMessage::IsAlive).unwrap().try_into().unwrap();
-}
 
 
 pub fn cli() -> Command {
@@ -62,11 +59,14 @@ fn main() {
     // First start the daemon if nothing is running.
     let listener = connect_as_server();
     match listener {
-        Ok(_) => info!("I could acquire the socket, I am the Server!"),
+        Ok(ref it) => {
+            info!("I could acquire the socket, I am the Server!");
+            it.set_nonblocking(true).unwrap();
+        },
         Err(_) => info!("I could _not_ acquire the socket, I am the Client!"),
     };
 
-    let Ok(listener) = listener else {
+    let Ok(server) = listener else {
         // If there is already another socket connection go into client mode and communicate with it.
         println!("The socket already exists, going into client mode!");
         do_all_client_actions(args);
@@ -75,6 +75,9 @@ fn main() {
 
 
     loop {
+        debug!("Changing temperature ...");
+        sleep(Duration::from_secs(1));
+
         // 1. Check if settings have to be changed due to IPC
 
         // 2. Check if settings have to be changed upon detection of certain programs / load
@@ -83,30 +86,7 @@ fn main() {
 
         // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
 
-
-        for stream in listener.incoming() {
-            let Ok(mut stream) = stream else {
-                break;
-            };
-            sleep(Duration::from_secs(1));
-
-            debug!("Got a new connection!");
-
-            let mut buf = vec![0; *EXPECTED_MESSAGE_SIZE];
-            let Ok(_) = stream.read_exact(&mut buf) else {
-                break;
-            };
-
-            println!("{:?}", buf);
-            let s: ClientMessage = bincode::deserialize(&buf).unwrap();
-
-            debug!("Message has contents: {:?}", s);
-
-            if s == ClientMessage::IsAlive {
-                let msg = bincode::serialize(&ServerMessage::Ok).unwrap();
-                stream.write_all(&msg).unwrap();
-                debug!("Sent back the message!");
-            }
-        }
+        // 5. Respond to messages
+        server_handle_messages(&server);
     }
 }
