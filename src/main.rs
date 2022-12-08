@@ -15,8 +15,8 @@ use clap::{arg, Command};
 use log::{debug, info};
 use crate::client::{do_all_client_actions};
 use crate::ipc::{connect_as_server, connect_as_client, ClientMessage, ServerMessage, get_message_from_client};
-use crate::server::server_handle_messages;
-
+use crate::server::{get_current_status, server_handle_messages};
+use crate::strategies::Strategy;
 
 
 pub fn cli() -> Command {
@@ -73,6 +73,8 @@ fn main() {
         return;
     };
 
+    let mut strategy = Strategy::default();
+    let mut status = get_current_status();
 
     loop {
         debug!("Changing temperature ...");
@@ -82,11 +84,11 @@ fn main() {
 
         // 2. Check if settings have to be changed upon detection of certain programs / load
 
-        // 3. Check the current temperatures
+        // 3. Check the current Status
 
         // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
 
         // 5. Respond to messages
-        server_handle_messages(&server);
+        server_handle_messages(&server, &mut strategy, &mut status);
     }
 }

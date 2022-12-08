@@ -10,6 +10,7 @@ use nix::sys::signal::Signal;
 use nix::unistd::Pid;
 use serde::{Serialize, Deserialize};
 use crate::strategies::Strategy;
+use crate::utils::Percentage;
 
 
 const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
@@ -20,7 +21,7 @@ pub enum ClientMessage {
     IsAlive,
     Status,
     Swap(Strategy),
-    SetFanPercent(i32),
+    SetFanPercent(Percentage),
     Reset,
 }
 
@@ -32,10 +33,10 @@ pub enum ServerMessage {
     Err,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Status {
     temp: i32,
-    fan_percent: i32,
+    fan_percent: Percentage,
 }
 
 

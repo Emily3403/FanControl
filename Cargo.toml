@@ -14,7 +14,6 @@ log = "0.4.17"
 pretty_env_logger = "0.4.0"
 nix = "0.26.1"
 
-
 [build-dependencies]
 shellexpand = "3.0.0"
 

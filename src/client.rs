@@ -2,6 +2,7 @@ use std::process::exit;
 use clap::ArgMatches;
 use crate::{ClientMessage, connect_as_client};
 use crate::ipc::send_message_to_server;
+use crate::utils::Percentage;
 
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
@@ -22,7 +23,7 @@ pub fn do_all_client_actions(args: ArgMatches) -> () {
         }
 
         Some(("fanPercent", sub_matches)) => {
-            let percent = sub_matches.get_one::<u32>("NUM").expect("required");
+            let percent = sub_matches.get_one::<Percentage>("NUM").expect("required");
 
             println!("{:?}", percent);
             true
