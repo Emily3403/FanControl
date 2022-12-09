@@ -80,15 +80,13 @@ fn main() {
         debug!("Changing temperature ...");
         sleep(Duration::from_secs(1));
 
-        // 1. Check if settings have to be changed due to IPC
+        // 1. Check if settings have to be changed upon detection of certain programs / load
 
-        // 2. Check if settings have to be changed upon detection of certain programs / load
+        // 2. Check the current Status
 
-        // 3. Check the current Status
+        // 3. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
 
-        // 4. Apply the new FanSpeed / PowerProfile in accordance with the current parameters
-
-        // 5. Respond to messages
+        // 4. Respond to messages
         server_handle_messages(&server, &mut strategy, &mut status);
     }
 }

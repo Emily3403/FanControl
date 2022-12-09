@@ -4,9 +4,11 @@ use log::debug;
 use crate::{ClientMessage, get_message_from_client, ServerMessage};
 use crate::ipc::{send_message_to_client, Status};
 use crate::strategies::Strategy;
-use crate::utils::Percentage;
+use crate::utils::{get_current_temp, Percentage};
 
 pub fn get_current_status() -> Status {
+    let temp = get_current_temp();
+    println!("{:?}", temp);
     todo!()
 }
 

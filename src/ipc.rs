@@ -10,7 +10,7 @@ use nix::sys::signal::Signal;
 use nix::unistd::Pid;
 use serde::{Serialize, Deserialize};
 use crate::strategies::Strategy;
-use crate::utils::Percentage;
+use crate::utils::{Percentage, Temperature};
 
 
 const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
@@ -35,7 +35,7 @@ pub enum ServerMessage {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Status {
-    temp: i32,
+    temp: Temperature,
     fan_percent: Percentage,
 }
 
