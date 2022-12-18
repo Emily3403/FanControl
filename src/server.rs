@@ -1,10 +1,10 @@
-use std::io::Error;
-use std::os::unix::net::UnixListener;
-use log::debug;
-use crate::{ClientMessage, get_message_from_client, ServerMessage};
 use crate::ipc::{send_message_to_client, Status};
 use crate::strategies::Strategy;
 use crate::utils::{get_current_temp, Percentage};
+use crate::{get_message_from_client, ClientMessage, ServerMessage};
+use log::debug;
+use std::io::Error;
+use std::os::unix::net::UnixListener;
 
 pub fn get_current_status() -> Status {
     let temp = get_current_temp();
@@ -24,7 +24,11 @@ fn set_fan_percentage(percentage: Percentage) -> Result<(), Error> {
     todo!()
 }
 
-pub fn server_handle_messages(server: &UnixListener, current_strategy: &mut Strategy, current_status: &mut Status) {
+pub fn server_handle_messages(
+    server: &UnixListener,
+    current_strategy: &mut Strategy,
+    current_status: &mut Status,
+) {
     for stream in server.incoming() {
         let Ok(stream) = stream else {
             break;
@@ -40,9 +44,27 @@ pub fn server_handle_messages(server: &UnixListener, current_strategy: &mut Stra
         let message = match client_message {
             ClientMessage::IsAlive => ServerMessage::Ok,
             ClientMessage::Status => ServerMessage::Status(current_status.clone()),
-            ClientMessage::Reset => if reset_fan_percentage().is_ok() { ServerMessage::Ok } else { ServerMessage::Err },
-            ClientMessage::Swap(strategy) => if swap_current_strategy(strategy).is_ok() { ServerMessage::Ok } else { ServerMessage::Err }
-            ClientMessage::SetFanPercent(percent) => if set_fan_percentage(percent).is_ok() { ServerMessage::Ok } else { ServerMessage::Err }
+            ClientMessage::Reset => {
+                if reset_fan_percentage().is_ok() {
+                    ServerMessage::Ok
+                } else {
+                    ServerMessage::Err
+                }
+            }
+            ClientMessage::Swap(strategy) => {
+                if swap_current_strategy(strategy).is_ok() {
+                    ServerMessage::Ok
+                } else {
+                    ServerMessage::Err
+                }
+            }
+            ClientMessage::SetFanPercent(percent) => {
+                if set_fan_percentage(percent).is_ok() {
+                    ServerMessage::Ok
+                } else {
+                    ServerMessage::Err
+                }
+            }
         };
 
         debug!("ClientMessage is of Type: {:?}", client_message);

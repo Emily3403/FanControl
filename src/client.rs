@@ -1,9 +1,8 @@
-use std::process::exit;
-use clap::ArgMatches;
-use crate::{ClientMessage, connect_as_client};
 use crate::ipc::send_message_to_server;
 use crate::utils::Percentage;
-
+use crate::{connect_as_client, ClientMessage};
+use clap::ArgMatches;
+use std::process::exit;
 
 pub fn do_all_client_actions(args: ArgMatches) -> () {
     let stream = connect_as_client().unwrap();

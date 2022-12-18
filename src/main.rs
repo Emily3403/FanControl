@@ -1,55 +1,43 @@
 #![feature(let_else)]
 
+mod client;
+mod ipc;
+mod server;
 mod strategies;
 mod utils;
-mod ipc;
-mod client;
-mod server;
 
-
-use std::thread::{sleep};
+use std::thread::sleep;
 use std::time::Duration;
 
-
-use clap::{arg, Command};
-use log::{debug, info};
-use crate::client::{do_all_client_actions};
-use crate::ipc::{connect_as_server, connect_as_client, ClientMessage, ServerMessage, get_message_from_client};
+use crate::client::do_all_client_actions;
+use crate::ipc::{
+    connect_as_client, connect_as_server, get_message_from_client, ClientMessage, ServerMessage,
+};
 use crate::server::{get_current_status, server_handle_messages};
 use crate::strategies::Strategy;
-
+use clap::{arg, Command};
+use log::{debug, info};
 
 pub fn cli() -> Command {
     Command::new("fanctl")
         .about("A FanControl Plugin for the Framework Laptop")
-
         .subcommand(
             Command::new("swap")
                 .about("Swaps the current strategy")
                 .arg(arg!(<STRATEGY> "The new strategy to apply"))
-
-                .arg_required_else_help(true)
-            // TODO: Validator
+                .arg_required_else_help(true), // TODO: Validator
         )
-
-        .subcommand(
-            Command::new("status")
-                .about("Prints out the current status of the program")
-        )
-
+        .subcommand(Command::new("status").about("Prints out the current status of the program"))
         .subcommand(
             Command::new("fanPercent")
                 .about("Sets the fan to a percentage between 0 and 100")
-                .arg(arg!(<NUM> "The Percentage number between 0 and 100")
-                         .value_parser(clap::value_parser!(u32))  // TODO: Make this between 0 and 100
+                .arg(
+                    arg!(<NUM> "The Percentage number between 0 and 100")
+                        .value_parser(clap::value_parser!(u32)), // TODO: Make this between 0 and 100
                 )
-                .arg_required_else_help(true)
+                .arg_required_else_help(true),
         )
-
-        .subcommand(
-            Command::new("reset")
-                .about("Resets the fan percentage if one was set")
-        )
+        .subcommand(Command::new("reset").about("Resets the fan percentage if one was set"))
 }
 
 fn main() {
@@ -62,7 +50,7 @@ fn main() {
         Ok(ref it) => {
             info!("I could acquire the socket, I am the Server!");
             it.set_nonblocking(true).unwrap();
-        },
+        }
         Err(_) => info!("I could _not_ acquire the socket, I am the Client!"),
     };
 

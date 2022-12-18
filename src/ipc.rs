@@ -1,17 +1,15 @@
 use std::{fs, io};
 
-
-use std::os::unix::net::{UnixListener, UnixStream};
-use std::process::{Command, Stdio};
-use std::time::Duration;
+use crate::strategies::Strategy;
+use crate::utils::{Percentage, Temperature};
 use log::{debug, info};
 use nix::sys::signal;
 use nix::sys::signal::Signal;
 use nix::unistd::Pid;
-use serde::{Serialize, Deserialize};
-use crate::strategies::Strategy;
-use crate::utils::{Percentage, Temperature};
-
+use serde::{Deserialize, Serialize};
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::process::{Command, Stdio};
+use std::time::Duration;
 
 const SOCKET_ADDR: &'static str = "/tmp/fwctrl.sock";
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
@@ -24,7 +22,6 @@ pub enum ClientMessage {
     SetFanPercent(Percentage),
     Reset,
 }
-
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ServerMessage {
@@ -39,13 +36,15 @@ pub struct Status {
     fan_percent: Percentage,
 }
 
-
 pub fn get_message_from_client(stream: &UnixStream) -> Result<ClientMessage, bincode::Error> {
     let stream = stream.try_clone()?;
     bincode::deserialize_from(stream)
 }
 
-pub fn send_message_to_client(stream: &UnixStream, message: ServerMessage) -> Result<(), bincode::Error> {
+pub fn send_message_to_client(
+    stream: &UnixStream,
+    message: ServerMessage,
+) -> Result<(), bincode::Error> {
     let stream = stream.try_clone()?;
     bincode::serialize_into(stream, &message)?;
 
@@ -57,13 +56,15 @@ pub fn get_message_from_server(stream: &UnixStream) -> Result<ServerMessage, bin
     bincode::deserialize_from(stream)
 }
 
-pub fn send_message_to_server(stream: &UnixStream, message: ClientMessage) -> Result<(), bincode::Error> {
+pub fn send_message_to_server(
+    stream: &UnixStream,
+    message: ClientMessage,
+) -> Result<(), bincode::Error> {
     let stream = stream.try_clone()?;
     bincode::serialize_into(stream, &message)?;
 
     Ok(())
 }
-
 
 fn get_pid_of_server() -> Option<i32> {
     let mut cmd = Command::new("lsof");
@@ -71,8 +72,9 @@ fn get_pid_of_server() -> Option<i32> {
     cmd.stdout(Stdio::piped());
 
     let mut child = cmd.spawn().ok()?;
-    child.wait().and_then(
-        |_| {
+    child
+        .wait()
+        .and_then(|_| {
             match cmd.status() {
                 Err(it) => Err(it),
 
@@ -85,7 +87,8 @@ fn get_pid_of_server() -> Option<i32> {
                     }
                 }
             }
-        }).ok()?;
+        })
+        .ok()?;
 
     let Ok(status) = cmd.status() else {
         debug!("Can't get PID of server (lsof failed) - aborting!");
@@ -103,9 +106,11 @@ fn get_pid_of_server() -> Option<i32> {
     Some(output.parse().ok()?)
 }
 
-
 fn check_server_responds_is_alive(stream: &mut UnixStream) -> bool {
-    debug!("Checking if the server responds to IsAlive message within {:?}", READ_TIMEOUT);
+    debug!(
+        "Checking if the server responds to IsAlive message within {:?}",
+        READ_TIMEOUT
+    );
 
     let Ok(()) = send_message_to_server(stream, ClientMessage::IsAlive) else {
         return false;
@@ -117,7 +122,6 @@ fn check_server_responds_is_alive(stream: &mut UnixStream) -> bool {
 
     response == ServerMessage::Ok
 }
-
 
 fn check_server_alive() -> bool {
     // First check if we can connect. If not, there is no chance that the server is active.
@@ -136,7 +140,9 @@ fn check_server_alive() -> bool {
     let is_alive = check_server_responds_is_alive(&mut stream);
 
     if !is_alive {
-        debug!("Can't connect to server (wrong response)! Killing the process and taking its place");
+        debug!(
+            "Can't connect to server (wrong response)! Killing the process and taking its place"
+        );
         signal::kill(Pid::from_raw(pid.into()), Signal::SIGKILL).unwrap();
     }
 
@@ -161,7 +167,6 @@ pub fn connect_as_server() -> io::Result<UnixListener> {
     // Retry binding. This might cause a race condition assuming two programs were startet at the same time, but it should be fine.
     UnixListener::bind(SOCKET_ADDR)
 }
-
 
 pub fn connect_as_client() -> io::Result<UnixStream> {
     UnixStream::connect(SOCKET_ADDR)

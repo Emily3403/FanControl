@@ -1,8 +1,7 @@
+use crate::utils::Percentage;
 use clap::builder::Str;
 use clap::ValueEnum;
-use serde::{Serialize, Deserialize};
-use crate::utils::Percentage;
-
+use serde::{Deserialize, Serialize};
 
 #[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Strategy {
@@ -16,7 +15,6 @@ impl Default for Strategy {
         Strategy::OnDemand
     }
 }
-
 
 trait PowerStrategy {
     fn get_fan_percent(temp: i32) -> Percentage {

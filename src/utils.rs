@@ -1,7 +1,7 @@
-use std::process::Command;
 use nix::sys::ptrace::cont;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::process::Command;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Percentage(u8);
@@ -9,7 +9,10 @@ pub struct Percentage(u8);
 impl Percentage {
     fn new(value: u8) -> Result<Percentage, String> {
         if value > 100 {
-            return Err(format!("Percentage must be between 0 and 100, got {}", value));
+            return Err(format!(
+                "Percentage must be between 0 and 100, got {}",
+                value
+            ));
         }
 
         Ok(Percentage(value))
@@ -19,7 +22,6 @@ impl Percentage {
         self.0
     }
 }
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct Temperature(f64);
@@ -33,7 +35,6 @@ impl Temperature {
         self.0
     }
 }
-
 
 pub fn get_current_temp() -> Temperature {
     // Run the "sensors -j" command and capture its output
@@ -53,15 +54,19 @@ pub fn get_current_temp() -> Temperature {
     let mut temps = Vec::new();
 
     for (k, v) in coretemp {
-        if !k.starts_with("Core ") { continue; };
+        if !k.starts_with("Core ") {
+            continue;
+        };
 
         for (temp_name, temp_val) in v.as_object().unwrap() {
-            if !temp_name.ends_with("_input") { continue; }
+            if !temp_name.ends_with("_input") {
+                continue;
+            }
             let Some(it) = temp_val.as_f64() else { continue; };
 
             temps.push(it);
         }
-    };
+    }
 
     // TODO: Should this really be the average or rather the max?
     Temperature::new(temps.iter().sum::<f64>() / temps.len() as f64)
